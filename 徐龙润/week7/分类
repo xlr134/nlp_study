@@ -1,0 +1,5 @@
+epco  = 5 (机器性能差，只是大概跑个结果)
+Model        学习率  池化层  隐藏层大小 acc
+gated_cnn     1e-3   avg     128      0.53
+gated_cnn     1e-3   max     128      0.6
+bert          1e-3   avg     128      0.758
