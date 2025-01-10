@@ -26,19 +26,18 @@ class TorchRNN(nn.Module):
 
         self.embedding = nn.Embedding(len(vocab), vector_dim, padding_idx=0)
         self.pool = nn.AvgPool1d(sentence_length)
-        self.layer = nn.RNN(vector_dim, sentence_length + 1, bias=False, batch_first=True)
-        # self.layer = nn.Linear(vector_dim, sentence_length + 1)
+        self.layer = nn.RNN(vector_dim, vector_dim, bias=False, batch_first=True)
+        self.layer_class = nn.Linear(vector_dim, sentence_length + 1)
         self.activation = torch.sigmoid  # sigmoid归一化函数
         self.loss = nn.CrossEntropyLoss()  # 交叉熵损失函数
 
     def forward(self, x, y=None):
         x = self.embedding(x)  # embedding  训练批次的数量 * 文本最大字符长度 -> 训练批次的数量 * 文本最大字符长度 * 指定单字的向量长度
-        x = x.transpose(1, 2)  # 转置 训练批次的数量 * 文本最大字符长度 * 指定单字的向量长度 -> 训练批次的数量  * 指定单字的向量长度 *文本最大字符长度
-        x = self.pool(x)  # 池化  训练批次的数量  * 指定单字的向量长度 *文本最大字符长度 -> 训练批次的数量  * 指定单字的向量长度 *1
-        x = x.squeeze()  # 去除维度为1 的数据 训练批次的数量  * 指定单字的向量长度 * 1 -> 训练批次的数量  * 指定单字的向量长度
-        out, h = self.layer(x)  # RNN 网络训练 训练批次的数量  * 指定单字的向量长度 -> 指定单字的向量长度 * 1
+        out, h = self.layer(x)  # RNN 网络训练 训练批次的数量 * 文本最大字符长度 * 指定单字的向量长度 -> 指定单字的向量长度 * 1
+        x = out[:, -1, :]
         # out = self.layer(x)  # RNN 网络训练 训练批次的数量  * 指定单字的向量长度 -> 指定单字的向量长度 * 1
-        y_pred = self.activation(out)  # 归一化 指定单字的向量长度 * 1 -> 指定单字的向量长度 * 1
+        y_pred = self.layer_class(x)  # 归一化 指定单字的向量长度 * 1 -> 指定单字的向量长度 * 1
+
         if y is not None:
             return self.loss(y_pred, y)
         else:
