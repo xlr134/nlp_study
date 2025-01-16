@@ -27,12 +27,10 @@ def load_weights(self, state_dict):
         output_bias = state_dict["encoder.layer.%d.output.dense.bias" % i].numpy() # shape: [hidden_size]
         ff_layer_norm_w = state_dict["encoder.layer.%d.output.LayerNorm.weight" % i].numpy() # shape: [hidden_size]
         ff_layer_norm_b = state_dict["encoder.layer.%d.output.LayerNorm.bias" % i].numpy() # shape: [hidden_size]
-"""
 
-"""
-BERT total parameters (excluding pooler output layer)
-= vocab_size * hidden_size + max_len * hidden_size + 2 * hidden_size + hidden_size * 2 + num_layers * [(hidden_size * hidden_size) * 4 + hidden_size * 9 + intermediate_size * hidden_size + intermediate_size]
-= vocab_size * hidden_size + max_len * hidden_size + hidden_size * 4 + num_layers * ((hidden_size * hidden_size) * 4 + hidden_size * 9 + intermediate_size * hidden_size * 2 + intermediate_size)
+    #pooler层
+    self.pooler_dense_weight = state_dict["pooler.dense.weight"].numpy() [hidden_size, hidden_size]
+    self.pooler_dense_bias = state_dict["pooler.dense.bias"].numpy() [hidden_size]
 """
 
 def count(num_layers, hidden_size, intermediate_size, max_len, vocab_size):
@@ -63,16 +61,29 @@ def count(num_layers, hidden_size, intermediate_size, max_len, vocab_size):
     ff_layer_norm_b = hidden_size    
     layer_weights = q_w + q_b + k_w + k_b + v_w + v_b + attention_output_weight + attention_output_bias + attention_layer_norm_w + attention_layer_norm_b + intermediate_weight + intermediate_bias + output_weight + output_bias + ff_layer_norm_w + ff_layer_norm_b
     print(f"Transformer weights (per layer): {layer_weights}")
+
+    pooler_dense_weight = hidden_size * hidden_size
+    pooler_dense_bias = hidden_size
+    pooler_weights = pooler_dense_weight + pooler_dense_bias
+    print(f"Pooler weights: {pooler_weights}")
     
-    transformer_weights = embedding_weights + num_layers * layer_weights
+    transformer_weights = embedding_weights + num_layers * layer_weights + pooler_weights
     print(f"Total BERT weights: {transformer_weights}")
 
-    return
+    return transformer_weights
 
 if __name__ == "__main__":
+    from transformers import BertModel
+
+    model = BertModel.from_pretrained("bert-base-chinese")
+    print(model.config)
+    expected_bert_param_count = sum([param.numel() for param in model.parameters()])
+    print(f"Total BERT weights from library: {expected_bert_param_count}")
+
     num_layers = 12
     hidden_size = 768
     intermediate_size = 3072
     max_len = 512
-    vocab_size = 30522
-    count(num_layers, hidden_size, intermediate_size, max_len, vocab_size)
+    vocab_size = 21128
+    calculated_bert_param_count = count(num_layers, hidden_size, intermediate_size, max_len, vocab_size)
+    print(f"Does expected and calculated param count equal? {expected_bert_param_count == calculated_bert_param_count}")
